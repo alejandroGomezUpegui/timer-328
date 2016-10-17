@@ -1,0 +1,66 @@
+/*
+ * Temporizador.c
+ *
+ * Created: 10/09/2016 11:10:01 a. m.
+ * Author : Arturo
+ */ 
+
+#define F_CPU 1000000
+#include <avr/io.h>
+#include <util/delay.h>
+#include <stdlib.h>
+#include <avr/interrupt.h>
+
+//uint8_t	 
+
+uint16_t nueva=0;
+
+int main(void)
+{
+//*****************  DEFINICION DE PUERTOS  ************************
+	DDRB = 0b00011111; //PINB0 = Toggle c/segundo, PINB1 = no usado, PINB2 = triac ppal, PINB3 = triac secundario, PINB4 = Enable/strobe signal DISPLAY
+	DDRC = 0b00000000; //PC0 (ADC0)|to INPUT  -  LM35, PC1 = 121 GRADOS CENT, PC2 = 134 GRADOS CENT, PC3 = INICIO CICLO, PC4 = ON/OFF
+	DDRD = 0b11110111; //PD4 = D4 a PD7 = D7 DATA DISPLAY, PD2 = E, PD1 = RW, PD0 = RS 
+	PORTB = 0b00000000; //apagado PINB2 = triac ppal, apagado PINB3 = triac secundario
+	PORTC = 0b00011110; // Prende pull up de PINC1
+
+//*****************  DEFINICION DE TIEMPO  ************************
+	TCCR1B |= (1<<CS10) | (1<<CS12);  //Prescaling for timer 1 of 16 bits de 1024, maximo valor alcanzar 65535 
+	TCNT1 = 0;		   // 
+
+//*****************  DEFINICION DE CONVERSOR ANALOGICO A DIGITAL  ************************
+	ADCSRA |= 1<<ADPS2; //ADC Prescaler to 16: 1.000.000/50.000= 20 OR 1.000.000/200.00 = 5. By default, the successive approximation circuitry requires an input clock frequency between 50kHz and
+						////200kHz to get maximum resolution. If a lower resolution than 10 bits is needed, the input clock frequency to the ADC can be higher than 200kHz to get a higher sample rate.
+	ADMUX |= 1<<REFS0;  //AVCC with external capacitor at AREF pin
+	ADCSRA |= 1<<ADIE;  // ADC Interrupt enable, como no se especifica en el registro ADMUX, los valores de MUX0 a MUX1 se asume trabajo con ADC0
+	ADCSRA |= 1<<ADEN;  //ADC Enable
+
+	//sei();
+		
+	ADCSRA |= 1<<ADSC;  // Start conversion AD	
+	
+	PORTB |= (1 << PINB0);
+	
+	while(1)
+	{
+		//cli();
+		if (TCNT1 % 1 == 0)
+		{
+			//CUALQUIER OTOR PERIFERICO
+		}
+		
+		if (TCNT1 > 1000)	  //reloj ppal = 1000000hz (0.000001seg)  == 1Useg ===>  65500 x 0.000001 = 0.065seg   =====> 65.5mseg
+		{
+			TCNT1 = 0;
+			nueva++;
+			PORTB ^= (1 << PINB0);
+			if (nueva == 5)
+			{
+				nueva = 0;
+				//hacer alguna actividad
+			}
+							 
+		}
+		//sei();
+	}
+}
